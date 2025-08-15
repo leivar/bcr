@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider     = "sqlite"
+  url          = env("DATABASE_URL")
+  relationMode = "foreignKeys"
+}
+
+model User {
+  id             String      @id @default(cuid())
+  email          String?     @unique
+  displayName    String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  // One room at a time
+  currentRoomId  String?
+  currentRoom    Room?       @relation("CurrentRoom", fields: [currentRoomId], references: [id], onUpdate: Cascade, onDelete: SetNull)
+
+  // Rooms this user owns
+  roomsOwned     Room[]      @relation("RoomOwner")
+
+  // History & relations
+  memberships    RoomMember[]
+  messages       Message[]
+  invitesCreated Invite[]    @relation("InviteCreatedBy")
+  invitesUsed    Invite[]    @relation("InviteUsedBy")
+}
+
+model Room {
+  id           String       @id @default(uuid())
+  name         String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  // Optional owner
+  ownerId      String?
+  owner        User?        @relation("RoomOwner", fields: [ownerId], references: [id], onUpdate: Cascade, onDelete: SetNull)
+
+  // Backref for current users
+  currentUsers User[]       @relation("CurrentRoom")
+
+  members      RoomMember[]
+  messages     Message[]
+  invites      Invite[]
+}
+
+model RoomMember {
+  id        String   @id @default(cuid())
+  userId    String
+  roomId    String
+  joinedAt  DateTime @default(now())
+  leftAt    DateTime?
+
+  user      User     @relation(fields: [userId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+  room      Room     @relation(fields: [roomId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+
+  @@index([roomId, joinedAt])
+  @@index([userId, joinedAt])
+  @@unique([userId, roomId, joinedAt])
+}
+
+model Invite {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  roomId      String
+  createdById String
+  expiresAt   DateTime
+  usedAt      DateTime?
+  usedById    String?
+
+  room        Room     @relation(fields: [roomId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+  createdBy   User     @relation("InviteCreatedBy", fields: [createdById], references: [id], onUpdate: Cascade, onDelete: Cascade)
+  usedBy      User?    @relation("InviteUsedBy", fields: [usedById], references: [id], onUpdate: Cascade, onDelete: SetNull)
+
+  @@index([roomId])
+  @@index([expiresAt])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  roomId    String
+  senderId  String
+  text      String
+  sentAt    DateTime @default(now())
+
+  room      Room     @relation(fields: [roomId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+  sender    User     @relation(fields: [senderId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+
+  @@index([roomId, sentAt])
+}

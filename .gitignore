@@ -1,0 +1,26 @@
+# Node dependencies
+server/node_modules
+web/node_modules
+
+# Build outputs
+server/dist
+web/.next
+web/out
+
+# Environment files
+server/.env
+server/.env.*
+web/.env.local
+web/.env.development.local
+web/.env.test.local
+web/.env.production.local
+
+# Prisma client (if generated inside node_modules, skip)
+server/src/generated/prisma
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
